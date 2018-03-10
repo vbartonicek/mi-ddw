@@ -25,13 +25,14 @@ class ChampionsLeagueSpider(scrapy.Spider):
             # Cards field
             elif (label == 'Cards'):
                 cards = field.xpath('.//span[@class="statistics--list--data"]/text()').extract()
+                labels = field.css('.statistics--list--data img::attr(title)').extract()
 
                 yellow = re.findall('\d+', cards[0])
                 red = re.findall('\d+', cards[1])
 
                 value = {
-                    'yellow': yellow[0],
-                    'red': red[0],
+                    labels[0].lower().replace(" ", "-"): yellow[0],
+                    labels[1].lower().replace(" ", "-"): red[0],
                 }
 
             # Passing types field
@@ -53,7 +54,7 @@ class ChampionsLeagueSpider(scrapy.Spider):
                 for type in types:
                     type_label = type.xpath('.//span/text()').extract()
                     type_value = type.css('div > span::text').extract_first()
-                    value[type_label[1]] = type_value
+                    value[type_label[1].lower().replace(" ", "-")] = type_value
 
             # Standard fields
             else:
@@ -65,21 +66,21 @@ class ChampionsLeagueSpider(scrapy.Spider):
 
     # Collect statistics data and split it into phases
     def parse_stats(self, response):
-        for stats in response.xpath('//div[@class="content-wrap"]'):
-            player = response.meta['player']
-            stats_sections = stats.css('.player--statistics--list')
-            player['matches'] = {}
+        player = response.meta['player']
+        stats_sections = response.css('.player--statistics--list')
+        player['matches'] = {}
 
-            for section in stats_sections:
-                fields = section.css('.field')
+        for section in stats_sections:
+            fields = section.css('.field')
+            phase_name = section.css('.stats-header::text').extract_first()
 
-                # Tournament phase
-                if (stats.css('.stats-header::text').extract_first() == 'Tournament phase'):
-                    player['matches']['tournament'] = self.parse_phase(fields)
+            # Tournament phase
+            if (phase_name == 'Tournament phase'):
+                player['matches']['tournament'] = self.parse_phase(fields)
 
-                # Qualification phase
-                elif (stats.css('.stats-header::text').extract_first() == 'Qualifying'):
-                    player['matches']['qualification'] = self.parse_phase(fields)
+            # Qualification phase
+            elif (phase_name == 'Qualifying'):
+                player['matches']['qualification'] = self.parse_phase(fields)
 
         yield player
 
@@ -106,7 +107,7 @@ class ChampionsLeagueSpider(scrapy.Spider):
 
     # Visit page of each club and collect links to players profiles
     def parse_clubs(self, response):
-        players = response.css('#team-data:first-child .squad--team-player')
+        players = response.css('#team-data .squad--team-player')
         players_urls = players.css('.squad--player-name > a::attr(href)').extract()
 
         for player_url in players_urls:
