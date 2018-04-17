@@ -83,44 +83,43 @@ def printStatistics(graph):
     print('=' * 10)
 
 
-# Draw communities
-def draw_communities(graph):
+# Get communities
+def get_communities(graph):
     communities = {node: cid + 1 for cid, community in
                    enumerate(netx.algorithms.community.k_clique_communities(graph, 3)) for node in
                    community}
 
-    pos = graphviz_layout(graph)
-    plt.figure(figsize=(10, 10))
-    netx.draw(graph, pos, font_size=8,
-              labels={v: str(v) for v in graph},
-              cmap=plt.get_cmap("rainbow"),
-              node_color=[communities[v] if v in communities else 0 for v in graph])
-    plt.savefig("output/communities_short.png")
-    # plt.show()
+    community_to_actors = {}
+    for key, val in communities.items():
+        if val not in community_to_actors:
+            community_to_actors[val] = []
+        community_to_actors[val].append(key)
+
+    for actor, community_id in communities.items():
+        graph.node[actor]['community_id'] = community_id
 
 
-def draw_centralities(graph):
+# Get centralities
+def get_centralities(graph):
     centralities = [netx.degree_centrality, netx.closeness_centrality,
                     netx.betweenness_centrality, netx.eigenvector_centrality]
-    region = 220
-    plt.figure(figsize=(18, 18))
+    index = 0
+
     for centrality in centralities:
-        region += 1
-        plt.subplot(region)
-        plt.title(centrality.__name__)
-        pos = netx.random_layout(graph)
-        netx.draw(graph, pos, font_size=8, labels={v: str(v) for v in graph},
-                  cmap=plt.get_cmap("bwr"), node_color=[centrality(graph)[k] for k in centrality(graph)])
-    plt.savefig("output/entralities.png")
-    # plt.show()
+        index += 1
+        title = "centrality_{}".format(index)
+        results = centrality(graph)
+
+        for actor, value in results.items():
+            graph.node[actor][title] = value
 
 
 def analyse_data(records, actor):
     graph = netx.Graph()
     create_graph(graph, records, actor)
 
-    # draw_communities(graph)
-    # draw_centralities(graph)
+    get_communities(graph)
+    get_centralities(graph)
 
     printStatistics(graph)
 
@@ -128,7 +127,7 @@ def analyse_data(records, actor):
     netx.write_gexf(graph, "output/export.gexf")
 
 
-text_file = 'data/casts_complete.csv'
+text_file = 'data/casts_short.csv'
 records = get_data(text_file)
 
 analyse_data(records, '')
