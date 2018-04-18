@@ -44,7 +44,7 @@ def get_data(file_name):
 
 
 # Create graph and count statistics
-def create_graph(graph, records, actor_name):
+def create_graph(graph, records):
     movies = {}
 
     for record in records:
@@ -61,8 +61,7 @@ def create_graph(graph, records, actor_name):
         for actor in actors:
             for next_actor in actors:
                 if (actor != next_actor):
-                    if (actor_name == '' or actor_name == actor or actor_name == next_actor):
-                        graph.add_edge(actor, next_actor)
+                    graph.add_edge(actor, next_actor)
 
 
 def printStatistics(graph):
@@ -95,7 +94,7 @@ def get_communities(graph):
         graph.node[actor]['community_id'] = community_id
 
     communities_sorted = sorted(community_to_actors.items(), key=lambda element: len(element[1]),
-                                            reverse=True)
+                                reverse=True)
 
     print("\nTOP COMMUNITIES:\n")
     for community in communities_sorted[:3]:
@@ -128,21 +127,43 @@ def get_centralities(graph):
             print('=' * 10)
 
 
-def analyse_data(records, actor):
+# Find top distances between given actor and other actors
+def get_actor_distances(graph, actor_name):
+    distances = netx.single_source_shortest_path_length(graph, actor_name)
+
+    sum = 0
+    count = 0
+    attribute_title = "distance_from_{}".format(actor_name).replace(" ", "")
+
+    for actor, length in distances.items():
+        graph.node[actor][attribute_title] = length
+        sum += length
+        count += 1
+
+    average_distance = sum / count
+    lengths_sorted = sorted(distances.items(), key=lambda element: element[1], reverse=True)
+
+    print("\nDISTANCE FROM {}:\n".format(actor_name))
+    print('Longest distance = {}'.format(
+        ", ".join(["{} - {}".format(actor[1], actor[0]) for actor in lengths_sorted[:5]])))
+    print('Average = {}'.format(average_distance))
+    print('=' * 10)
+
+
+def analyse_data(records):
     graph = netx.Graph()
-    create_graph(graph, records, actor)
+    create_graph(graph, records)
 
     printStatistics(graph)
-
+    get_actor_distances(graph, 'Penelope Cruz')
     get_communities(graph)
     get_centralities(graph)
 
     # write to GEXF
-    netx.write_gexf(graph, "output/export.gexf")
+    netx.write_gexf(graph, "output/results.gexf")
 
 
 text_file = 'data/casts_complete.csv'
 records = get_data(text_file)
 
-analyse_data(records, '')
-# analyse_data(records, 'Kevin Bacon')
+analyse_data(records)
