@@ -1,10 +1,6 @@
 # import
 import csv
-import pprint
-import nltk
 import networkx as netx
-from networkx.drawing.nx_agraph import graphviz_layout
-import matplotlib.pyplot as plt
 
 
 # Object representing one input line
@@ -75,7 +71,7 @@ def printStatistics(graph):
     density = edges_count / (nodes_count * (nodes_count - 1) / 2)
     components_count = netx.number_connected_components(graph)
 
-    print('=' * 10)
+    print("\nSTATISTICS:\n")
     print('Nodes = ', nodes_count)
     print('Edges = ', edges_count)
     print('Density = ', density)
@@ -98,6 +94,16 @@ def get_communities(graph):
     for actor, community_id in communities.items():
         graph.node[actor]['community_id'] = community_id
 
+    communities_sorted = sorted(community_to_actors.items(), key=lambda element: len(element[1]),
+                                            reverse=True)
+
+    print("\nTOP COMMUNITIES:\n")
+    for community in communities_sorted[:3]:
+        print("Community ID = {}".format(community[0]))
+        print('Actors count= {}'.format(len(community[1])))
+        print('Actors = {}'.format(community[1]))
+        print('=' * 10)
+
 
 # Get centralities
 def get_centralities(graph):
@@ -113,21 +119,29 @@ def get_centralities(graph):
         for actor, value in results.items():
             graph.node[actor][title] = value
 
+        centralities_sorted = sorted(results.items(), key=lambda element: element[1], reverse=True)
+
+        print("\nTOP CENTRALITY_{}:\n".format(index))
+        for centrality in centralities_sorted[:3]:
+            print("Actor = {}".format(centrality[0]))
+            print('Centrality = {}'.format(centrality[1]))
+            print('=' * 10)
+
 
 def analyse_data(records, actor):
     graph = netx.Graph()
     create_graph(graph, records, actor)
 
+    printStatistics(graph)
+
     get_communities(graph)
     get_centralities(graph)
-
-    printStatistics(graph)
 
     # write to GEXF
     netx.write_gexf(graph, "output/export.gexf")
 
 
-text_file = 'data/casts_short.csv'
+text_file = 'data/casts_complete.csv'
 records = get_data(text_file)
 
 analyse_data(records, '')
